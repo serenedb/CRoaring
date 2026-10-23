@@ -3240,8 +3240,10 @@ void roaring_bitmap_frozen_serialize(const roaring_bitmap_t *rb, char *buf) {
         }
         memcpy(&count_zone[i], &count, 2);
     }
-    memcpy(key_zone, ra->keys, ra->size * sizeof(uint16_t));
-    memcpy(typecode_zone, ra->typecodes, ra->size * sizeof(uint8_t));
+    if (ra->size > 0) {
+        memcpy(key_zone, ra->keys, ra->size * sizeof(uint16_t));
+        memcpy(typecode_zone, ra->typecodes, ra->size * sizeof(uint8_t));
+    }
     uint32_t header = ((uint32_t)ra->size << 15) | FROZEN_COOKIE;
     memcpy(header_zone, &header, 4);
 }
