@@ -2254,19 +2254,9 @@ static inline int container_range_cardinality(const container_t *c,
                 min > 0 ? array_container_rank(array, (uint16_t)(min - 1)) : 0;
             return array_container_rank(array, (uint16_t)max) - below;
         }
-        case RUN_CONTAINER_TYPE: {
-            const run_container_t *run = const_CAST_run(c);
-            int sum = 0;
-            for (int32_t i = 0; i < run->n_runs; i++) {
-                uint32_t start = run->runs[i].value;
-                uint32_t end = start + run->runs[i].length;
-                if (start > max) break;
-                if (end < min) continue;
-                sum += (int)((end < max ? end : max) -
-                             (start > min ? start : min) + 1);
-            }
-            return sum;
-        }
+        case RUN_CONTAINER_TYPE:
+            return run_container_range_cardinality(
+                const_CAST_run(c), (uint16_t)min, (uint16_t)max);
         default:
             assert(false);
             roaring_unreachable;
