@@ -1725,6 +1725,65 @@ bool roaring_bitmap_iterate_runs(const roaring_bitmap_t *r,
     return run_joiner_iterate(r, &joiner);
 }
 
+typedef struct run_subtraction_s {
+    const roaring_array_t *holes;
+    int32_t i;
+    bool found;
+    uint32_t hole_first;
+    uint32_t hole_last;
+    roaring_run_iterator iterator;
+    void *ptr;
+} run_subtraction_t;
+
+static bool run_subtraction_find_hole(run_subtraction_t * subtraction,
+                                      uint32_t x) {
+    if (subtraction->found && subtraction->hole_last >= x) return true;
+    const roaring_array_t *ra = subtraction->holes;
+    const uint16_t key = (uint16_t)(x >> 16);
+    if (subtraction->i < ra->size && ra->keys[subtraction->i] < key) {
+        subtraction->i = ra_advance_until(ra, key, subtraction->i);
+    }
+    for (; subtraction->i < ra->size; ++subtraction->i) {
+        const int32_t i = subtraction->i;
+        uint16_t first;
+        uint16_t last;
+        if (container_next_run(ra->containers[i], ra->typecodes[i],
+                               ra->keys[i] == key ? (uint16_t)x : 0, &first,
+                               &last)) {
+            const uint32_t base = (uint32_t)ra->keys[i] << 16;
+            subtraction->found = true;
+            subtraction->hole_first = base | first;
+            subtraction->hole_last = base | last;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool run_subtraction_add(uint32_t first, uint32_t last, void *ptr) {
+    run_subtraction_t *subtraction = (run_subtraction_t *)ptr;
+    while (run_subtraction_find_hole(subtraction, first) &&
+           subtraction->hole_first <= last) {
+        if (subtraction->hole_first > first &&
+            !subtraction->iterator(first, subtraction->hole_first - 1,
+                                   subtraction->ptr)) {
+            return false;
+        }
+        if (subtraction->hole_last >= last) return true;
+        first = subtraction->hole_last + 1;
+    }
+    return subtraction->iterator(first, last, subtraction->ptr);
+}
+
+bool roaring_bitmap_andnot_iterate_runs(
+    const roaring_bitmap_t *r1, const roaring_bitmap_t *r2,
+    roaring_run_iterator iterator, void *ptr) {
+    run_subtraction_t subtraction = {
+        &r2->high_low_container, 0, false, 0, 0, iterator, ptr};
+    run_joiner_t joiner = {run_subtraction_add, &subtraction, false, 0, 0};
+    return run_joiner_iterate(r1, &joiner);
+}
+
 /****
  * begin roaring_uint32_iterator_t
  *****/

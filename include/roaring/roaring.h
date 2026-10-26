@@ -910,6 +910,15 @@ bool roaring_bitmap_iterate_runs(const roaring_bitmap_t *r,
                                  roaring_run_iterator iterator, void *ptr);
 
 /**
+ * Like `roaring_bitmap_iterate_runs`, but over the values of r1 that are not
+ * in r2, without computing r1 - r2.
+ */
+bool roaring_bitmap_andnot_iterate_runs(const roaring_bitmap_t *r1,
+                                        const roaring_bitmap_t *r2,
+                                        roaring_run_iterator iterator,
+                                        void *ptr);
+
+/**
  * Return true if the two bitmaps contain the same elements.
  */
 bool roaring_bitmap_equals(const roaring_bitmap_t *r1,

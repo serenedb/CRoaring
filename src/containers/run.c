@@ -801,6 +801,20 @@ bool run_container_iterate_runs(const run_container_t *cont, uint32_t base,
     return true;
 }
 
+bool run_container_next_run(const run_container_t *run, uint16_t x,
+                            uint16_t *first, uint16_t *last) {
+    int32_t i = run_container_index_equalorlarger(run, x);
+    if (i < 0) return false;
+    *first = run->runs[i].value > x ? run->runs[i].value : x;
+    uint32_t end = (uint32_t)run->runs[i].value + run->runs[i].length;
+    while (i + 1 < run->n_runs && run->runs[i + 1].value == end + 1) {
+        ++i;
+        end = (uint32_t)run->runs[i].value + run->runs[i].length;
+    }
+    *last = (uint16_t)end;
+    return true;
+}
+
 bool run_container_is_subset(const run_container_t *container1,
                              const run_container_t *container2) {
     int i1 = 0, i2 = 0;

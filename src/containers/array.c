@@ -594,6 +594,18 @@ bool array_container_iterate_runs(const array_container_t *cont, uint32_t base,
     return true;
 }
 
+bool array_container_next_run(const array_container_t *arr, uint16_t x,
+                              uint16_t *first, uint16_t *last) {
+    int32_t i = array_container_index_equalorlarger(arr, x);
+    if (i < 0) return false;
+    *first = arr->array[i];
+    while (i + 1 < arr->cardinality && arr->array[i + 1] == arr->array[i] + 1) {
+        ++i;
+    }
+    *last = arr->array[i];
+    return true;
+}
+
 #ifdef __cplusplus
 }
 }

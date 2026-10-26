@@ -468,6 +468,9 @@ bool run_container_iterate64(const run_container_t *cont, uint32_t base,
 bool run_container_iterate_runs(const run_container_t *cont, uint32_t base,
                                 roaring_run_iterator iterator, void *ptr);
 
+bool run_container_next_run(const run_container_t *run, uint16_t x,
+                            uint16_t *first, uint16_t *last);
+
 /**
  * Writes the underlying array to buf, outputs how many bytes were written.
  * This is meant to be byte-by-byte compatible with the Java and Go versions of
