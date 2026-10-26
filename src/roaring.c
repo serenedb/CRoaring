@@ -1389,17 +1389,11 @@ uint64_t roaring_bitmap_range_cardinality_closed(const roaring_bitmap_t *r,
 
     int i = ra_get_index(ra, minhb);
     if (i >= 0) {
-        if (minhb == maxhb) {
-            card += container_rank(ra->containers[i], ra->typecodes[i],
-                                   range_end & 0xffff);
-        } else {
-            card +=
-                container_get_cardinality(ra->containers[i], ra->typecodes[i]);
-        }
-        if ((range_start & 0xffff) != 0) {
-            card -= container_rank(ra->containers[i], ra->typecodes[i],
-                                   (range_start & 0xffff) - 1);
-        }
+        const uint16_t last =
+            minhb == maxhb ? (uint16_t)(range_end & 0xffff) : 0xffff;
+        card +=
+            container_range_cardinality(ra->containers[i], ra->typecodes[i],
+                                        (uint16_t)(range_start & 0xffff), last);
         i++;
     } else {
         i = -i - 1;
@@ -1411,8 +1405,9 @@ uint64_t roaring_bitmap_range_cardinality_closed(const roaring_bitmap_t *r,
             card +=
                 container_get_cardinality(ra->containers[i], ra->typecodes[i]);
         } else if (key == maxhb) {
-            card += container_rank(ra->containers[i], ra->typecodes[i],
-                                   range_end & 0xffff);
+            card +=
+                container_range_cardinality(ra->containers[i], ra->typecodes[i],
+                                            0, (uint16_t)(range_end & 0xffff));
             break;
         } else {
             break;

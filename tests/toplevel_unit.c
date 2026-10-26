@@ -5188,6 +5188,54 @@ DEFINE_TEST(test_range_cardinality) {
     roaring_bitmap_free(r);
 }
 
+DEFINE_TEST(test_range_cardinality_inside_each_container_type) {
+    const uint32_t s = 65536;
+    roaring_bitmap_t *r = roaring_bitmap_create();
+    for (uint32_t v = 0; v < s; v += 37) roaring_bitmap_add(r, v);
+    for (uint32_t k = 0; k < 40; ++k)
+        roaring_bitmap_add_range(r, s + k * 1500, s + k * 1500 + 700);
+    for (uint32_t v = 2 * s; v < 3 * s; v += 3) roaring_bitmap_add(r, v);
+    roaring_bitmap_add_range(r, 4 * s, 5 * s);
+    roaring_bitmap_run_optimize(r);
+
+    roaring_statistics_t stats;
+    roaring_bitmap_statistics(r, &stats);
+    assert_int_equal(1, stats.n_array_containers);
+    assert_int_equal(2, stats.n_run_containers);
+    assert_int_equal(1, stats.n_bitset_containers);
+
+    const uint32_t end = 6 * s;
+    uint32_t *below = (uint32_t *)malloc((end + 1) * sizeof(uint32_t));
+    below[0] = 0;
+    for (uint32_t v = 0; v < end; ++v)
+        below[v + 1] = below[v] + roaring_bitmap_contains(r, v);
+
+    assert_int_equal(below[2 * s] - below[s],
+                     roaring_bitmap_range_cardinality(r, s, 2 * s));
+    assert_int_equal(below[2 * s + 2] - below[2 * s + 1],
+                     roaring_bitmap_range_cardinality(r, 2 * s + 1, 2 * s + 2));
+    assert_int_equal(below[end], roaring_bitmap_range_cardinality(r, 0, end));
+    for (int q = 0; q < 10000; ++q) {
+        uint32_t a = our_rand() % end;
+        uint32_t b = our_rand() % end;
+        if (a > b) {
+            const uint32_t t = a;
+            a = b;
+            b = t;
+        }
+        assert_int_equal(below[b] - below[a],
+                         roaring_bitmap_range_cardinality(r, a, b));
+        if (a < b) {
+            assert_int_equal(
+                below[b] - below[a],
+                roaring_bitmap_range_cardinality_closed(r, a, b - 1));
+        }
+    }
+
+    free(below);
+    roaring_bitmap_free(r);
+}
+
 void frozen_serialization_compare(roaring_bitmap_t *r1) {
     size_t num_bytes = roaring_bitmap_frozen_size_in_bytes(r1);
     char *buf = (char *)roaring_aligned_malloc(32, num_bytes);
@@ -5670,6 +5718,7 @@ int main() {
         cmocka_unit_test(test_remove_range),
         cmocka_unit_test(test_remove_many),
         cmocka_unit_test(test_range_cardinality),
+        cmocka_unit_test(test_range_cardinality_inside_each_container_type),
         cmocka_unit_test(test_frozen_serialization),
         cmocka_unit_test(test_frozen_serialization_max_containers),
 #if ROARING_UNSAFE_FROZEN_TESTS

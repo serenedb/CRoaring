@@ -2224,6 +2224,31 @@ static inline int container_rank(const container_t *c, uint8_t type,
     return false;
 }
 
+static inline int container_range_cardinality(const container_t *c,
+                                              uint8_t type, uint16_t min,
+                                              uint16_t max) {
+    c = container_unwrap_shared(c, &type);
+    if (min == 0 && max == 0xFFFF) {
+        return container_get_cardinality(c, type);
+    }
+    switch (type) {
+        case BITSET_CONTAINER_TYPE:
+            return bitset_lenrange_cardinality(const_CAST_bitset(c)->words, min,
+                                               (uint32_t)(max - min));
+        case ARRAY_CONTAINER_TYPE:
+            return array_container_range_cardinality(const_CAST_array(c), min,
+                                                     max);
+        case RUN_CONTAINER_TYPE:
+            return run_container_range_cardinality(const_CAST_run(c), min, max);
+        default:
+            assert(false);
+            roaring_unreachable;
+    }
+    assert(false);
+    roaring_unreachable;
+    return 0;
+}
+
 // bulk version of container_rank(); return number of consumed elements
 static inline uint32_t container_rank_many(const container_t *c, uint8_t type,
                                            uint64_t start_rank,

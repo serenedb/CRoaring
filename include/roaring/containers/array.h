@@ -464,6 +464,13 @@ inline int array_container_rank(const array_container_t *arr, uint16_t x) {
     }
 }
 
+inline int array_container_range_cardinality(const array_container_t *arr,
+                                             uint16_t min, uint16_t max) {
+    const int32_t idx = binarySearch(arr->array, arr->cardinality, min);
+    const int first = idx >= 0 ? idx : -idx - 1;
+    return array_container_rank(arr, max) - first;
+}
+
 /*  bulk version of array_container_rank(); return number of consumed elements
  */
 inline uint32_t array_container_rank_many(const array_container_t *arr,

@@ -897,6 +897,26 @@ int run_container_rank(const run_container_t *container, uint16_t x) {
     }
     return sum;
 }
+
+int run_container_range_cardinality(const run_container_t *container,
+                                    uint16_t min, uint16_t max) {
+    int32_t i =
+        interleavedBinarySearch(container->runs, container->n_runs, min);
+    if (i < 0) {
+        i = -i - 2;
+        if (i < 0) i = 0;
+    }
+    int sum = 0;
+    for (; i < container->n_runs; i++) {
+        const uint32_t start = container->runs[i].value;
+        const uint32_t end = start + container->runs[i].length;
+        if (start > max) break;
+        if (end < min) continue;
+        sum += (int)((end < max ? end : max) - (start > min ? start : min) + 1);
+    }
+    return sum;
+}
+
 uint32_t run_container_rank_many(const run_container_t *container,
                                  uint64_t start_rank, const uint32_t *begin,
                                  const uint32_t *end, uint64_t *ans) {
