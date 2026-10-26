@@ -67,6 +67,8 @@ typedef struct roaring_array_s {
 
 typedef bool (*roaring_iterator)(uint32_t value, void *param);
 typedef bool (*roaring_iterator64)(uint64_t value, void *param);
+typedef bool (*roaring_run_iterator)(uint32_t first, uint32_t last,
+                                     void *param);
 
 /**
  *  (For advanced users.)

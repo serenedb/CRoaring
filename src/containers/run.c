@@ -788,6 +788,19 @@ bool run_container_iterate64(const run_container_t *cont, uint32_t base,
     return true;
 }
 
+bool run_container_iterate_runs(const run_container_t *cont, uint32_t base,
+                                roaring_run_iterator iterator, void *ptr) {
+    for (int32_t i = 0; i < cont->n_runs;) {
+        const uint32_t first = cont->runs[i].value;
+        uint32_t last = first + cont->runs[i].length;
+        while (++i < cont->n_runs && cont->runs[i].value == last + 1) {
+            last = (uint32_t)cont->runs[i].value + cont->runs[i].length;
+        }
+        if (!iterator(base + first, base + last, ptr)) return false;
+    }
+    return true;
+}
+
 bool run_container_is_subset(const run_container_t *container1,
                              const run_container_t *container2) {
     int i1 = 0, i2 = 0;

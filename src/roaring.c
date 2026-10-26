@@ -1680,6 +1680,51 @@ bool roaring_iterate64(const roaring_bitmap_t *r, roaring_iterator64 iterator,
     return true;
 }
 
+typedef struct run_joiner_s {
+    roaring_run_iterator iterator;
+    void *ptr;
+    bool pending;
+    uint32_t first;
+    uint32_t last;
+} run_joiner_t;
+
+static bool run_joiner_add(uint32_t first, uint32_t last, void *ptr) {
+    run_joiner_t *joiner = (run_joiner_t *)ptr;
+    if (joiner->pending) {
+        if (first == joiner->last + 1) {
+            joiner->last = last;
+            return true;
+        }
+        if (!joiner->iterator(joiner->first, joiner->last, joiner->ptr)) {
+            return false;
+        }
+    }
+    joiner->pending = true;
+    joiner->first = first;
+    joiner->last = last;
+    return true;
+}
+
+static bool run_joiner_iterate(const roaring_bitmap_t *r,
+                               run_joiner_t *joiner) {
+    const roaring_array_t *ra = &r->high_low_container;
+    for (int i = 0; i < ra->size; ++i) {
+        if (!container_iterate_runs(ra->containers[i], ra->typecodes[i],
+                                    ((uint32_t)ra->keys[i]) << 16,
+                                    run_joiner_add, joiner)) {
+            return false;
+        }
+    }
+    return !joiner->pending ||
+           joiner->iterator(joiner->first, joiner->last, joiner->ptr);
+}
+
+bool roaring_bitmap_iterate_runs(const roaring_bitmap_t *r,
+                                 roaring_run_iterator iterator, void *ptr) {
+    run_joiner_t joiner = {iterator, ptr, false, 0, 0};
+    return run_joiner_iterate(r, &joiner);
+}
+
 /****
  * begin roaring_uint32_iterator_t
  *****/

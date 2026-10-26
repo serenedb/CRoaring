@@ -1982,6 +1982,30 @@ static inline bool container_iterate(const container_t *c, uint8_t type,
     return false;
 }
 
+static inline bool container_iterate_runs(const container_t *c, uint8_t type,
+                                          uint32_t base,
+                                          roaring_run_iterator iterator,
+                                          void *ptr) {
+    c = container_unwrap_shared(c, &type);
+    switch (type) {
+        case BITSET_CONTAINER_TYPE:
+            return bitset_container_iterate_runs(const_CAST_bitset(c), base,
+                                                 iterator, ptr);
+        case ARRAY_CONTAINER_TYPE:
+            return array_container_iterate_runs(const_CAST_array(c), base,
+                                                iterator, ptr);
+        case RUN_CONTAINER_TYPE:
+            return run_container_iterate_runs(const_CAST_run(c), base, iterator,
+                                              ptr);
+        default:
+            assert(false);
+            roaring_unreachable;
+    }
+    assert(false);
+    roaring_unreachable;
+    return false;
+}
+
 static inline bool container_iterate64(const container_t *c, uint8_t type,
                                        uint32_t base,
                                        roaring_iterator64 iterator,

@@ -5236,6 +5236,144 @@ DEFINE_TEST(test_range_cardinality_inside_each_container_type) {
     roaring_bitmap_free(r);
 }
 
+typedef struct collected_runs_s {
+    uint32_t *values;
+    size_t count;
+    size_t capacity;
+    size_t stop_after;
+} collected_runs_t;
+
+static bool collect_run(uint32_t first, uint32_t last, void *ptr) {
+    collected_runs_t *runs = (collected_runs_t *)ptr;
+    if (runs->count == runs->capacity) {
+        runs->capacity = 2 * runs->capacity + 16;
+        runs->values = (uint32_t *)realloc(
+            runs->values, 2 * runs->capacity * sizeof(uint32_t));
+    }
+    runs->values[2 * runs->count] = first;
+    runs->values[2 * runs->count + 1] = last;
+    return ++runs->count != runs->stop_after;
+}
+
+static collected_runs_t runs_of_values(const roaring_bitmap_t *r) {
+    const uint64_t n = roaring_bitmap_get_cardinality(r);
+    uint32_t *values = (uint32_t *)malloc((n + 1) * sizeof(uint32_t));
+    roaring_bitmap_to_uint32_array(r, values);
+    collected_runs_t runs = {NULL, 0, 0, 0};
+    for (uint64_t i = 0; i < n;) {
+        const uint32_t first = values[i];
+        uint32_t last = first;
+        while (++i < n && values[i] == last + 1) last = values[i];
+        collect_run(first, last, &runs);
+    }
+    free(values);
+    return runs;
+}
+
+static void assert_runs_prefix(const collected_runs_t *expected,
+                               const collected_runs_t *actual, size_t count) {
+    assert_int_equal(count, actual->count);
+    for (size_t i = 0; i < 2 * count; ++i) {
+        assert_int_equal(expected->values[i], actual->values[i]);
+    }
+}
+
+static void assert_iterate_runs(const roaring_bitmap_t *r) {
+    collected_runs_t expected = runs_of_values(r);
+    collected_runs_t all = {NULL, 0, 0, 0};
+    assert_true(roaring_bitmap_iterate_runs(r, collect_run, &all));
+    assert_runs_prefix(&expected, &all, expected.count);
+    const size_t stops[] = {1, 2, 3, expected.count / 2, expected.count};
+    for (size_t i = 0; i < sizeof(stops) / sizeof(stops[0]); ++i) {
+        if (stops[i] == 0 || stops[i] > expected.count) continue;
+        collected_runs_t head = {NULL, 0, 0, stops[i]};
+        assert_false(roaring_bitmap_iterate_runs(r, collect_run, &head));
+        assert_runs_prefix(&expected, &head, stops[i]);
+        free(head.values);
+    }
+    free(expected.values);
+    free(all.values);
+}
+
+static roaring_bitmap_t *random_runs_bitmap(void) {
+    const uint16_t keys[] = {0, 1, 2, 3, 4, 5, 6, 7, 100, 0xFFFF};
+    roaring_bitmap_t *r = roaring_bitmap_create();
+    for (uint32_t k = 0; k < sizeof(keys) / sizeof(keys[0]); ++k) {
+        const uint32_t base = (uint32_t)keys[k] << 16;
+        switch (k % 4) {
+            case 0:
+                for (int i = 0; i < 200; ++i) {
+                    roaring_bitmap_add(r, base + our_rand() % 65536);
+                }
+                break;
+            case 1:
+                for (int i = 0; i < 30; ++i) {
+                    const uint32_t first = our_rand() % 65536;
+                    const uint32_t last =
+                        minimum_uint32(first + our_rand() % 500, 65535);
+                    roaring_bitmap_add_range_closed(r, base + first,
+                                                    base + last);
+                }
+                break;
+            case 2:
+                for (uint32_t v = 0; v < 65536; ++v) {
+                    if (our_rand() % 2) roaring_bitmap_add(r, base + v);
+                }
+                break;
+            default:
+                roaring_bitmap_add_range_closed(r, base, base + 65535);
+                for (int i = 0; i < 100; ++i) {
+                    roaring_bitmap_remove(r, base + our_rand() % 65536);
+                }
+                break;
+        }
+        if (our_rand() % 2) roaring_bitmap_add(r, base);
+        if (our_rand() % 2) roaring_bitmap_add(r, base + 65535);
+    }
+    roaring_bitmap_run_optimize(r);
+    return r;
+}
+
+DEFINE_TEST(test_iterate_runs) {
+    roaring_bitmap_t *r = roaring_bitmap_create();
+    collected_runs_t runs = {NULL, 0, 0, 0};
+    assert_true(roaring_bitmap_iterate_runs(r, collect_run, &runs));
+    assert_int_equal(0, runs.count);
+
+    roaring_bitmap_add_range_closed(r, 0, UINT32_MAX);
+    assert_true(roaring_bitmap_iterate_runs(r, collect_run, &runs));
+    assert_int_equal(1, runs.count);
+    assert_int_equal(0, runs.values[0]);
+    assert_int_equal(UINT32_MAX, runs.values[1]);
+    roaring_bitmap_free(r);
+    free(runs.values);
+
+    r = roaring_bitmap_create();
+    for (uint32_t v = 0; v < 30000; v += 3) roaring_bitmap_add(r, v);
+    roaring_bitmap_add_range_closed(r, 62, 200);
+    roaring_bitmap_add_range_closed(r, 65000, 65537);
+    roaring_bitmap_add_range_closed(r, 2 * 65536 - 5, 2 * 65536 + 2);
+    roaring_bitmap_add(r, UINT32_MAX);
+    assert_iterate_runs(r);
+    roaring_bitmap_free(r);
+
+    for (int round = 0; round < 8; ++round) {
+        r = random_runs_bitmap();
+        roaring_statistics_t stats;
+        roaring_bitmap_statistics(r, &stats);
+        assert_true(stats.n_array_containers > 0);
+        assert_true(stats.n_run_containers > 0);
+        assert_true(stats.n_bitset_containers > 0);
+        assert_iterate_runs(r);
+
+        roaring_bitmap_set_copy_on_write(r, true);
+        roaring_bitmap_t *shared = roaring_bitmap_copy(r);
+        assert_iterate_runs(shared);
+        roaring_bitmap_free(shared);
+        roaring_bitmap_free(r);
+    }
+}
+
 void frozen_serialization_compare(roaring_bitmap_t *r1) {
     size_t num_bytes = roaring_bitmap_frozen_size_in_bytes(r1);
     char *buf = (char *)roaring_aligned_malloc(32, num_bytes);
@@ -5719,6 +5857,7 @@ int main() {
         cmocka_unit_test(test_remove_many),
         cmocka_unit_test(test_range_cardinality),
         cmocka_unit_test(test_range_cardinality_inside_each_container_type),
+        cmocka_unit_test(test_iterate_runs),
         cmocka_unit_test(test_frozen_serialization),
         cmocka_unit_test(test_frozen_serialization_max_containers),
 #if ROARING_UNSAFE_FROZEN_TESTS

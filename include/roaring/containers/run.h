@@ -33,6 +33,7 @@ namespace roaring {
 // Note: in pure C++ code, you should avoid putting `using` in header files
 using api::roaring_iterator;
 using api::roaring_iterator64;
+using api::roaring_run_iterator;
 
 namespace internal {
 #endif
@@ -463,6 +464,9 @@ bool run_container_iterate(const run_container_t *cont, uint32_t base,
 bool run_container_iterate64(const run_container_t *cont, uint32_t base,
                              roaring_iterator64 iterator, uint64_t high_bits,
                              void *ptr);
+
+bool run_container_iterate_runs(const run_container_t *cont, uint32_t base,
+                                roaring_run_iterator iterator, void *ptr);
 
 /**
  * Writes the underlying array to buf, outputs how many bytes were written.

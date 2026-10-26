@@ -581,6 +581,19 @@ bool array_container_iterate64(const array_container_t *cont, uint32_t base,
     return true;
 }
 
+bool array_container_iterate_runs(const array_container_t *cont, uint32_t base,
+                                  roaring_run_iterator iterator, void *ptr) {
+    for (int32_t i = 0; i < cont->cardinality;) {
+        const uint32_t first = cont->array[i];
+        uint32_t last = first;
+        while (++i < cont->cardinality && cont->array[i] == last + 1) {
+            last = cont->array[i];
+        }
+        if (!iterator(base + first, base + last, ptr)) return false;
+    }
+    return true;
+}
+
 #ifdef __cplusplus
 }
 }

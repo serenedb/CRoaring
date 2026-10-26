@@ -893,6 +893,23 @@ bool roaring_iterate64(const roaring_bitmap_t *r, roaring_iterator64 iterator,
                        uint64_t high_bits, void *ptr);
 
 /**
+ * Iterate over the maximal runs of consecutive values of the bitmap. The
+ * function iterator is called once per run with its first and last values
+ * (both included) and ptr (can be NULL) as the third parameter. A run that
+ * spans several containers is visited once.
+ *
+ * `roaring_run_iterator` returns true when the iteration should continue and
+ * false when it should stop.
+ *
+ * Returns true if the iterator returned true throughout (so that all runs were
+ * necessarily visited).
+ *
+ * Iteration is ordered: from the smallest to the largest runs.
+ */
+bool roaring_bitmap_iterate_runs(const roaring_bitmap_t *r,
+                                 roaring_run_iterator iterator, void *ptr);
+
+/**
  * Return true if the two bitmaps contain the same elements.
  */
 bool roaring_bitmap_equals(const roaring_bitmap_t *r1,

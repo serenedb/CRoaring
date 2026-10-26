@@ -1103,6 +1103,34 @@ bool bitset_container_iterate64(const bitset_container_t *cont, uint32_t base, r
   return true;
 }
 
+bool bitset_container_iterate_runs(const bitset_container_t *cont, uint32_t base, roaring_run_iterator iterator, void *ptr) {
+  bool open = false;
+  uint32_t first = 0;
+  for (int32_t i = 0; i < BITSET_CONTAINER_SIZE_IN_WORDS; ++i, base += 64) {
+    uint64_t w = cont->words[i];
+    if (open) {
+      if (w == UINT64_MAX) continue;
+      const uint32_t end = (uint32_t)roaring_trailing_zeroes(~w);
+      if (!iterator(first, base + end - 1, ptr)) return false;
+      open = false;
+      w &= UINT64_MAX << end;
+    }
+    while (w != 0) {
+      const uint64_t next = w + (w & (~w + 1));
+      const uint32_t start = (uint32_t)roaring_trailing_zeroes(w);
+      if (next == 0) {
+        open = true;
+        first = base + start;
+        break;
+      }
+      const uint32_t end = (uint32_t)roaring_trailing_zeroes(next);
+      if (!iterator(base + start, base + end - 1, ptr)) return false;
+      w &= next;
+    }
+  }
+  return !open || iterator(first, base - 1, ptr);
+}
+
 #if CROARING_IS_X64
 #if CROARING_COMPILER_SUPPORTS_AVX512
 CROARING_TARGET_AVX512
