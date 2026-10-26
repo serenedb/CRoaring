@@ -2788,6 +2788,35 @@ DEFINE_TEST(test_cpp_fastunion_zero_or_one_input) {
     assert_true(in == orig);
 }
 
+DEFINE_TEST(test_cpp_iterate_runs) {
+    Roaring r;
+    r.addRange(5, 10);
+    r.addRange(65535, 65540);
+    r.add(UINT32_MAX);
+    std::vector<std::pair<uint32_t, uint32_t>> runs;
+    const auto collect = [&](uint32_t first, uint32_t last) {
+        runs.emplace_back(first, last);
+        return true;
+    };
+    assert_true(r.iterateRuns(collect));
+    assert_true(
+        (runs == std::vector<std::pair<uint32_t, uint32_t>>{
+                     {5, 9}, {65535, 65539}, {UINT32_MAX, UINT32_MAX}}));
+
+    runs.clear();
+    assert_true(r.andnotIterateRuns(Roaring{7, 65536, UINT32_MAX}, collect));
+    assert_true((runs == std::vector<std::pair<uint32_t, uint32_t>>{
+                             {5, 6}, {8, 9}, {65535, 65535}, {65537, 65539}}));
+
+    runs.clear();
+    assert_false(
+        r.andnotIterateRuns(Roaring{7}, [&](uint32_t first, uint32_t last) {
+            runs.emplace_back(first, last);
+            return runs.size() < 2;
+        }));
+    assert_int_equal(2, runs.size());
+}
+
 int main() {
     roaring::misc::tellmeall();
     const struct CMUnitTest tests[] = {
@@ -2888,6 +2917,7 @@ int main() {
         cmocka_unit_test(test_cpp_self_aliasing),
         cmocka_unit_test(test_cpp_roaring64map_self_aliasing),
         cmocka_unit_test(test_cpp_fastunion_zero_or_one_input),
+        cmocka_unit_test(test_cpp_iterate_runs),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
