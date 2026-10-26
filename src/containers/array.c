@@ -29,6 +29,8 @@ extern inline int array_container_index_equalorlarger(
 
 extern inline int array_container_rank(const array_container_t *arr,
                                        uint16_t x);
+extern inline int array_container_range_cardinality(
+    const array_container_t *arr, uint16_t min, uint16_t max);
 extern inline uint32_t array_container_rank_many(const array_container_t *arr,
                                                  uint64_t start_rank,
                                                  const uint32_t *begin,
