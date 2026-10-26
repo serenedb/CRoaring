@@ -516,6 +516,37 @@ class Roaring {
     }
 
     /**
+     * Iterate over the maximal runs of consecutive values: f(first, last) is
+     * called once per run with its first and last values (both included),
+     * from the smallest run to the largest, until it returns false.
+     *
+     * Returns true if f returned true throughout.
+     */
+    template <typename F>
+    bool iterateRuns(F f) const {
+        return api::roaring_bitmap_iterate_runs(
+            &roaring,
+            [](uint32_t first, uint32_t last, void *ptr) -> bool {
+                return (*static_cast<F *>(ptr))(first, last);
+            },
+            &f);
+    }
+
+    /**
+     * Like iterateRuns, but over the values that are not in r, without
+     * computing the difference.
+     */
+    template <typename F>
+    bool andnotIterateRuns(const Roaring &r, F f) const {
+        return api::roaring_bitmap_andnot_iterate_runs(
+            &roaring, &r.roaring,
+            [](uint32_t first, uint32_t last, void *ptr) -> bool {
+                return (*static_cast<F *>(ptr))(first, last);
+            },
+            &f);
+    }
+
+    /**
      * Selects the value at index rnk in the bitmap, where the smallest value
      * is at index 0.
      *
