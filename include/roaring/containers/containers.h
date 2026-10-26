@@ -2006,6 +2006,28 @@ static inline bool container_iterate_runs(const container_t *c, uint8_t type,
     return false;
 }
 
+static inline bool container_next_run(const container_t *c, uint8_t type,
+                                      uint16_t x, uint16_t *first,
+                                      uint16_t *last) {
+    c = container_unwrap_shared(c, &type);
+    switch (type) {
+        case BITSET_CONTAINER_TYPE:
+            return bitset_container_next_run(const_CAST_bitset(c), x, first,
+                                             last);
+        case ARRAY_CONTAINER_TYPE:
+            return array_container_next_run(const_CAST_array(c), x, first,
+                                            last);
+        case RUN_CONTAINER_TYPE:
+            return run_container_next_run(const_CAST_run(c), x, first, last);
+        default:
+            assert(false);
+            roaring_unreachable;
+    }
+    assert(false);
+    roaring_unreachable;
+    return false;
+}
+
 static inline bool container_iterate64(const container_t *c, uint8_t type,
                                        uint32_t base,
                                        roaring_iterator64 iterator,
