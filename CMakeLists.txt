@@ -108,8 +108,12 @@ include(CTest)
 ##################################
 #### My understanding is that variable get passed down to subdirectories, so
 #### this needs to be done here.
-set (TEST_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/")
-set (BENCHMARK_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/realdata/")
+if(NOT DEFINED TEST_DATA_DIR)
+  set (TEST_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/")
+endif()
+if(NOT DEFINED BENCHMARK_DATA_DIR)
+  set (BENCHMARK_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/realdata/")
+endif()
 MESSAGE( STATUS "BENCHMARK_DATA_DIR: " ${BENCHMARK_DATA_DIR} )
 MESSAGE( STATUS "TEST_DATA_DIR: " ${TEST_DATA_DIR} )
 configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/tests/config.h.in"
