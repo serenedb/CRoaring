@@ -1018,6 +1018,7 @@ size_t bitset_extract_setbits_uint16(const uint64_t *words, size_t length,
 
 #if defined(CROARING_ASMBITMANIPOPTIMIZATION) && defined(CROARING_IS_X64)
 
+CROARING_ALLOW_UNALIGNED
 static inline uint64_t _asm_bitset_set_list_withcard(uint64_t *words,
                                                      uint64_t card,
                                                      const uint16_t *list,
@@ -1045,6 +1046,7 @@ static inline uint64_t _asm_bitset_set_list_withcard(uint64_t *words,
     return card;
 }
 
+CROARING_ALLOW_UNALIGNED
 static inline void _asm_bitset_set_list(uint64_t *words, const uint16_t *list,
                                         uint64_t length) {
     uint64_t pos;
@@ -1101,6 +1103,7 @@ static inline void _asm_bitset_set_list(uint64_t *words, const uint16_t *list,
     }
 }
 
+CROARING_ALLOW_UNALIGNED
 static inline uint64_t _asm_bitset_clear_list(uint64_t *words, uint64_t card,
                                               const uint16_t *list,
                                               uint64_t length) {
@@ -1128,6 +1131,7 @@ static inline uint64_t _asm_bitset_clear_list(uint64_t *words, uint64_t card,
     return card;
 }
 
+CROARING_ALLOW_UNALIGNED
 static inline uint64_t _scalar_bitset_clear_list(uint64_t *words, uint64_t card,
                                                  const uint16_t *list,
                                                  uint64_t length) {
@@ -1146,6 +1150,7 @@ static inline uint64_t _scalar_bitset_clear_list(uint64_t *words, uint64_t card,
     return card;
 }
 
+CROARING_ALLOW_UNALIGNED
 static inline uint64_t _scalar_bitset_set_list_withcard(uint64_t *words,
                                                         uint64_t card,
                                                         const uint16_t *list,
@@ -1165,6 +1170,7 @@ static inline uint64_t _scalar_bitset_set_list_withcard(uint64_t *words,
     return card;
 }
 
+CROARING_ALLOW_UNALIGNED
 static inline void _scalar_bitset_set_list(uint64_t *words,
                                            const uint16_t *list,
                                            uint64_t length) {
@@ -1207,6 +1213,7 @@ void bitset_set_list(uint64_t *words, const uint16_t *list, uint64_t length) {
     }
 }
 #else
+CROARING_ALLOW_UNALIGNED
 uint64_t bitset_clear_list(uint64_t *words, uint64_t card, const uint16_t *list,
                            uint64_t length) {
     uint64_t offset, load, newload, pos, index;
@@ -1224,6 +1231,7 @@ uint64_t bitset_clear_list(uint64_t *words, uint64_t card, const uint16_t *list,
     return card;
 }
 
+CROARING_ALLOW_UNALIGNED
 uint64_t bitset_set_list_withcard(uint64_t *words, uint64_t card,
                                   const uint16_t *list, uint64_t length) {
     uint64_t offset, load, newload, pos, index;
@@ -1241,6 +1249,7 @@ uint64_t bitset_set_list_withcard(uint64_t *words, uint64_t card,
     return card;
 }
 
+CROARING_ALLOW_UNALIGNED
 void bitset_set_list(uint64_t *words, const uint16_t *list, uint64_t length) {
     uint64_t offset, load, newload, pos, index;
     const uint16_t *end = list + length;
@@ -1260,6 +1269,7 @@ void bitset_set_list(uint64_t *words, const uint16_t *list, uint64_t length) {
 /* flip specified bits */
 /* TODO: consider whether worthwhile to make an asm version */
 
+CROARING_ALLOW_UNALIGNED
 uint64_t bitset_flip_list_withcard(uint64_t *words, uint64_t card,
                                    const uint16_t *list, uint64_t length) {
     uint64_t offset, load, newload, pos, index;
@@ -1279,6 +1289,7 @@ uint64_t bitset_flip_list_withcard(uint64_t *words, uint64_t card,
     return card;
 }
 
+CROARING_ALLOW_UNALIGNED
 void bitset_flip_list(uint64_t *words, const uint16_t *list, uint64_t length) {
     uint64_t offset, load, newload, pos, index;
     const uint16_t *end = list + length;

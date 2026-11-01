@@ -105,6 +105,7 @@ bitset_container_t *bitset_container_create_uninitialized(void) {
 }
 
 /* Copy one container into another. We assume that they are distinct. */
+CROARING_ALLOW_UNALIGNED
 void bitset_container_copy(const bitset_container_t *source,
                            bitset_container_t *dest) {
     dest->cardinality = source->cardinality;
@@ -179,6 +180,7 @@ bitset_container_t *bitset_container_clone(const bitset_container_t *src) {
     return bitset;
 }
 
+CROARING_ALLOW_UNALIGNED
 void bitset_container_offset(const bitset_container_t *c, container_t **loc,
                              container_t **hic, uint16_t offset) {
     bitset_container_t *bc = NULL;
@@ -331,6 +333,7 @@ int bitset_container_compute_cardinality(const bitset_container_t *bitset) {
 #else  // CROARING_IS_X64
 
 /* Get the number of bits set (force computation) */
+CROARING_ALLOW_UNALIGNED
 int bitset_container_compute_cardinality(const bitset_container_t *bitset) {
     const uint64_t *words = bitset->words;
     int32_t sum = 0;
@@ -892,6 +895,7 @@ int bitset_container_##opname##_justcard(const bitset_container_t *src_1,     \
 #else
 
 #define CROARING_BITSET_CONTAINER_FN(opname, opsymbol, avx_intrinsic, neon_intrinsic)  \
+CROARING_ALLOW_UNALIGNED                                                  \
 int bitset_container_##opname(const bitset_container_t *src_1,            \
                               const bitset_container_t *src_2,            \
                               bitset_container_t *dst) {                  \
@@ -910,6 +914,7 @@ int bitset_container_##opname(const bitset_container_t *src_1,            \
     dst->cardinality = sum;                                               \
     return dst->cardinality;                                              \
 }                                                                         \
+CROARING_ALLOW_UNALIGNED                                                  \
 int bitset_container_##opname##_nocard(const bitset_container_t *src_1,   \
                                        const bitset_container_t *src_2,   \
                                        bitset_container_t *dst) {         \
@@ -922,6 +927,7 @@ int bitset_container_##opname##_nocard(const bitset_container_t *src_1,   \
     dst->cardinality = BITSET_UNKNOWN_CARDINALITY;                        \
     return dst->cardinality;                                              \
 }                                                                         \
+CROARING_ALLOW_UNALIGNED                                                  \
 int bitset_container_##opname##_justcard(const bitset_container_t *src_1, \
                               const bitset_container_t *src_2) {          \
     const uint64_t * __restrict__ words_1 = src_1->words;                 \
@@ -1074,6 +1080,7 @@ int bitset_container_number_of_runs(bitset_container_t *bc) {
 }
 
 
+CROARING_ALLOW_UNALIGNED
 int32_t bitset_container_write(const bitset_container_t *container,
                                   char *buf) {
 #if CROARING_IS_BIG_ENDIAN

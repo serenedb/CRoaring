@@ -16,6 +16,7 @@ namespace internal {
 
 /* Compute the intersection of src_1 and src_2 and write the result to
  * dst.  */
+CROARING_ALLOW_UNALIGNED
 void array_bitset_container_intersection(const array_container_t *src_1,
                                          const bitset_container_t *src_2,
                                          array_container_t *dst) {
@@ -49,6 +50,7 @@ void array_bitset_container_intersection(const array_container_t *src_1,
 }
 
 /* Compute the size of the intersection of src_1 and src_2. */
+CROARING_ALLOW_UNALIGNED
 int array_bitset_container_intersection_cardinality(
     const array_container_t *src_1, const bitset_container_t *src_2) {
     int32_t newcard = 0;
@@ -60,6 +62,7 @@ int array_bitset_container_intersection_cardinality(
     return newcard;
 }
 
+CROARING_ALLOW_UNALIGNED
 bool array_bitset_container_intersect(const array_container_t *src_1,
                                       const bitset_container_t *src_2) {
     const int32_t origcard = src_1->cardinality;
@@ -73,6 +76,7 @@ bool array_bitset_container_intersect(const array_container_t *src_1,
 /* Compute the intersection of src_1 and src_2 and write the result to
  * dst. It is allowed for dst to be equal to src_1. We assume that dst is a
  * valid container. */
+CROARING_ALLOW_UNALIGNED
 void array_run_container_intersection(const array_container_t *src_1,
                                       const run_container_t *src_2,
                                       array_container_t *dst) {
@@ -117,6 +121,7 @@ void array_run_container_intersection(const array_container_t *src_1,
  * *dst. If the result is true then the result is a bitset_container_t
  * otherwise is a array_container_t. If *dst ==  src_2, an in-place processing
  * is attempted.*/
+CROARING_ALLOW_UNALIGNED
 bool run_bitset_container_intersection(const run_container_t *src_1,
                                        const bitset_container_t *src_2,
                                        container_t **dst) {
@@ -210,6 +215,7 @@ bool run_bitset_container_intersection(const run_container_t *src_1,
 }
 
 /* Compute the size of the intersection between src_1 and src_2 . */
+CROARING_ALLOW_UNALIGNED
 int array_run_container_intersection_cardinality(const array_container_t *src_1,
                                                  const run_container_t *src_2) {
     if (run_container_is_full(src_2)) {
@@ -245,6 +251,7 @@ int array_run_container_intersection_cardinality(const array_container_t *src_1,
 
 /* Compute the intersection  between src_1 and src_2
  **/
+CROARING_ALLOW_UNALIGNED
 int run_bitset_container_intersection_cardinality(
     const run_container_t *src_1, const bitset_container_t *src_2) {
     if (run_container_is_full(src_1)) {
@@ -259,6 +266,7 @@ int run_bitset_container_intersection_cardinality(
     return answer;
 }
 
+CROARING_ALLOW_UNALIGNED
 bool array_run_container_intersect(const array_container_t *src_1,
                                    const run_container_t *src_2) {
     if (run_container_is_full(src_2)) {
@@ -292,6 +300,7 @@ bool array_run_container_intersect(const array_container_t *src_1,
 
 /* Compute the intersection  between src_1 and src_2
  **/
+CROARING_ALLOW_UNALIGNED
 bool run_bitset_container_intersect(const run_container_t *src_1,
                                     const bitset_container_t *src_2) {
     if (run_container_is_full(src_1)) {

@@ -2110,6 +2110,55 @@ DEFINE_TEST(test_portable_serialize) {
 }
 
 #if !CROARING_IS_BIG_ENDIAN
+// Every operation of the view "v" of "r" with "other", in both orders, must
+// match the same operation on "r".
+void check_frozen_view_with(const roaring64_bitmap_t* v,
+                            const roaring64_bitmap_t* r,
+                            const roaring64_bitmap_t* other) {
+    auto check = [&](auto op, auto inplace_op, auto cardinality) {
+        roaring64_bitmap_t* pairs[][2] = {
+            {op(v, other), op(r, other)},
+            {op(other, v), op(other, r)},
+            {roaring64_bitmap_copy(other), roaring64_bitmap_copy(other)},
+        };
+        inplace_op(pairs[2][0], v);
+        inplace_op(pairs[2][1], r);
+        for (auto& pair : pairs) {
+            assert_true(roaring64_bitmap_equals(pair[0], pair[1]));
+            roaring64_bitmap_free(pair[0]);
+            roaring64_bitmap_free(pair[1]);
+        }
+        assert_int_equal(cardinality(v, other), cardinality(r, other));
+        assert_int_equal(cardinality(other, v), cardinality(other, r));
+    };
+    check(
+        [](auto a, auto b) { return roaring64_bitmap_and(a, b); },
+        [](auto a, auto b) { roaring64_bitmap_and_inplace(a, b); },
+        [](auto a, auto b) { return roaring64_bitmap_and_cardinality(a, b); });
+    check([](auto a, auto b) { return roaring64_bitmap_or(a, b); },
+          [](auto a, auto b) { roaring64_bitmap_or_inplace(a, b); },
+          [](auto a, auto b) { return roaring64_bitmap_or_cardinality(a, b); });
+    check(
+        [](auto a, auto b) { return roaring64_bitmap_xor(a, b); },
+        [](auto a, auto b) { roaring64_bitmap_xor_inplace(a, b); },
+        [](auto a, auto b) { return roaring64_bitmap_xor_cardinality(a, b); });
+    check([](auto a, auto b) { return roaring64_bitmap_andnot(a, b); },
+          [](auto a, auto b) { roaring64_bitmap_andnot_inplace(a, b); },
+          [](auto a, auto b) {
+              return roaring64_bitmap_andnot_cardinality(a, b);
+          });
+    assert_int_equal(roaring64_bitmap_intersect(v, other),
+                     roaring64_bitmap_intersect(r, other));
+    assert_int_equal(roaring64_bitmap_is_subset(v, other),
+                     roaring64_bitmap_is_subset(r, other));
+    assert_int_equal(roaring64_bitmap_is_subset(other, v),
+                     roaring64_bitmap_is_subset(other, r));
+    assert_int_equal(roaring64_bitmap_equals(other, v),
+                     roaring64_bitmap_equals(other, r));
+    assert_true(roaring64_bitmap_jaccard_index(v, other) ==
+                roaring64_bitmap_jaccard_index(r, other));
+}
+
 // Run the read-only API over a portable frozen view of "r" whose buffer starts
 // "offset" bytes past an aligned address. The container payloads then sit at
 // any alignment, which the view must tolerate.
@@ -2199,6 +2248,50 @@ void check_frozen_view_queries(const roaring64_bitmap_t* r, size_t offset) {
                      size);
     assert_memory_equal(again.data(), buf, size);
 
+    roaring64_bitmap_t* derived[][2] = {
+        {roaring64_bitmap_flip(v, 0, 1ULL << 20),
+         roaring64_bitmap_flip(r, 0, 1ULL << 20)},
+        {roaring64_bitmap_add_offset(v, 7), roaring64_bitmap_add_offset(r, 7)},
+    };
+    for (auto& pair : derived) {
+        assert_true(roaring64_bitmap_equals(pair[0], pair[1]));
+        roaring64_bitmap_free(pair[0]);
+        roaring64_bitmap_free(pair[1]);
+    }
+
+    // Beside each container of "r", a container of each other type, an array
+    // much smaller than its array, and one that leaves a short tail of it.
+    roaring64_bitmap_t* prefix = roaring64_bitmap_create();
+    for (uint64_t i = 1; i < 3 * 202; i += 3) {
+        roaring64_bitmap_add(prefix, i);
+    }
+    roaring64_bitmap_t* runs = roaring64_bitmap_create();
+    roaring64_bitmap_add_range(runs, 0, 2000);
+    roaring64_bitmap_add_range(runs, 65536, 65536 + 3000);
+    for (uint64_t i = 131072; i < 131072 + 20000; i += 2) {
+        roaring64_bitmap_add(runs, i);
+    }
+    roaring64_bitmap_run_optimize(runs);
+    roaring64_bitmap_t* arrays = roaring64_bitmap_create();
+    for (uint64_t i : {4, 1000, 2998, (12 << 16) + 5, (12 << 16) + 777}) {
+        roaring64_bitmap_add(arrays, i);
+    }
+    for (uint64_t i = 65536; i < 65536 + 1000; i += 10) {
+        roaring64_bitmap_add(arrays, i);
+    }
+    for (uint64_t i = 139950; i < 150050; i += 101) {
+        roaring64_bitmap_add(arrays, i);
+    }
+    roaring64_bitmap_t* bitsets = roaring64_bitmap_create();
+    for (uint64_t i = 0; i < 20000; i += 2) {
+        roaring64_bitmap_add(bitsets, i);
+        roaring64_bitmap_add(bitsets, (12 << 16) + i);
+    }
+    for (roaring64_bitmap_t* other : {prefix, runs, arrays, bitsets}) {
+        check_frozen_view_with(v, r, other);
+        roaring64_bitmap_free(other);
+    }
+
     roaring64_bitmap_free(v);
 }
 #endif  // !CROARING_IS_BIG_ENDIAN
@@ -2217,11 +2310,14 @@ DEFINE_TEST(test_portable_deserialize_frozen_unaligned) {
     for (size_t offset = 0; offset < 8; offset++) {
         check_frozen_view_queries(r, offset);
     }
-    // Several 32-bit buckets, some with enough containers for offset headers.
+    // Several 32-bit buckets, some with enough containers for offset headers,
+    // and a full run container.
     for (uint64_t k = 3; k < 12; k++) {
         roaring64_bitmap_add(r, (k << 16) + 7 * k);
         roaring64_bitmap_add(r, (k << 32) + 7 * k);
     }
+    roaring64_bitmap_add_range(r, 12 << 16, 13 << 16);
+    roaring64_bitmap_run_optimize(r);
     for (size_t offset = 0; offset < 8; offset++) {
         check_frozen_view_queries(r, offset);
     }

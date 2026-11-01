@@ -833,6 +833,7 @@ static void binarySearch4(const uint16_t *array, int32_t n, uint16_t target1,
  * smaller than target1, and so forth.
  * It has logarithmic complexity.
  */
+CROARING_ALLOW_UNALIGNED
 static void binarySearch2(const uint16_t *array, int32_t n, uint16_t target1,
                           uint16_t target2, int32_t *index1, int32_t *index2) {
     const uint16_t *base1 = array;
@@ -854,6 +855,7 @@ static void binarySearch2(const uint16_t *array, int32_t n, uint16_t target1,
  * and binarySearch2. This approach can be slightly superior to a conventional
  * galloping search in some instances.
  */
+CROARING_ALLOW_UNALIGNED
 int32_t intersect_skewed_uint16(const uint16_t *small, size_t size_s,
                                 const uint16_t *large, size_t size_l,
                                 uint16_t *buffer) {
@@ -910,6 +912,7 @@ int32_t intersect_skewed_uint16(const uint16_t *small, size_t size_s,
 }
 
 // TODO: this could be accelerated, possibly, by using binarySearch4 as above.
+CROARING_ALLOW_UNALIGNED
 int32_t intersect_skewed_uint16_cardinality(const uint16_t *small,
                                             size_t size_s,
                                             const uint16_t *large,
@@ -945,6 +948,7 @@ int32_t intersect_skewed_uint16_cardinality(const uint16_t *small,
     return (int32_t)pos;
 }
 
+CROARING_ALLOW_UNALIGNED
 bool intersect_skewed_uint16_nonempty(const uint16_t *small, size_t size_s,
                                       const uint16_t *large, size_t size_l) {
     size_t idx_l = 0, idx_s = 0;
@@ -996,6 +1000,7 @@ static inline bool croaring_equal4_uint16(const uint16_t *a,
 // galloping and copy the values in between in bulk.
 
 // Returns the first index i in [lo, n) with array[i] >= key, or n.
+CROARING_ALLOW_UNALIGNED
 static inline size_t croaring_gallop_uint16(const uint16_t *array, size_t lo,
                                             size_t n, uint16_t key) {
     if (lo >= n || array[lo] >= key) return lo;
@@ -1020,6 +1025,7 @@ static inline size_t croaring_gallop_uint16(const uint16_t *array, size_t lo,
 // Union of a short and a long sorted array. Every write goes to
 // out[pos] with pos <= i + j, where i and j count the values read so
 // far.
+CROARING_ALLOW_UNALIGNED
 static size_t union_skewed_uint16(const uint16_t *small, size_t size_s,
                                   const uint16_t *large, size_t size_l,
                                   uint16_t *out) {
@@ -1038,6 +1044,7 @@ static size_t union_skewed_uint16(const uint16_t *small, size_t size_s,
 }
 
 // Symmetric difference of a short and a long sorted array.
+CROARING_ALLOW_UNALIGNED
 static int32_t xor_skewed_uint16(const uint16_t *small, size_t size_s,
                                  const uint16_t *large, size_t size_l,
                                  uint16_t *out) {
@@ -1060,6 +1067,7 @@ static int32_t xor_skewed_uint16(const uint16_t *small, size_t size_s,
 
 // a1 minus a short a2. Every write goes to a_out[k..] with k <= i, so
 // a_out may be a1.
+CROARING_ALLOW_UNALIGNED
 static int difference_skewed_small_a2_uint16(const uint16_t *a1, int length1,
                                              const uint16_t *a2, int length2,
                                              uint16_t *a_out) {
@@ -1078,6 +1086,7 @@ static int difference_skewed_small_a2_uint16(const uint16_t *a1, int length1,
 
 // A short a1 minus a2. Every write goes to a_out[k] with k <= i, so
 // a_out may be a1.
+CROARING_ALLOW_UNALIGNED
 static int difference_skewed_small_a1_uint16(const uint16_t *a1, int length1,
                                              const uint16_t *a2, int length2,
                                              uint16_t *a_out) {
@@ -1094,6 +1103,7 @@ static int difference_skewed_small_a1_uint16(const uint16_t *a1, int length1,
 // Intersection of a short and a long sorted array, writing only on a
 // match: every write goes to out[k] with k no larger than the index of
 // the matched value on either side, so out may be either input.
+CROARING_ALLOW_UNALIGNED
 static size_t intersect_tail_uint16(const uint16_t *small, size_t size_s,
                                     const uint16_t *large, size_t size_l,
                                     uint16_t *out) {
@@ -1109,6 +1119,7 @@ static size_t intersect_tail_uint16(const uint16_t *small, size_t size_s,
     return k;
 }
 
+CROARING_ALLOW_UNALIGNED
 static size_t intersect_tail_uint16_cardinality(const uint16_t *small,
                                                 size_t size_s,
                                                 const uint16_t *large,

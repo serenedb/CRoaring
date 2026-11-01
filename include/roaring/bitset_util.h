@@ -58,6 +58,7 @@ static inline void bitset_set_range(uint64_t *words, uint32_t start,
 /*
  * Find the cardinality of the bitset in [begin,begin+lenminusone]
  */
+CROARING_ALLOW_UNALIGNED
 static inline int bitset_lenrange_cardinality(const uint64_t *words,
                                               uint32_t start,
                                               uint32_t lenminusone) {
@@ -82,6 +83,7 @@ static inline int bitset_lenrange_cardinality(const uint64_t *words,
 /*
  * Check whether the cardinality of the bitset in [begin,begin+lenminusone] is 0
  */
+CROARING_ALLOW_UNALIGNED
 static inline bool bitset_lenrange_empty(const uint64_t *words, uint32_t start,
                                          uint32_t lenminusone) {
     uint32_t firstword = start / 64;

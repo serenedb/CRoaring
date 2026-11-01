@@ -3426,6 +3426,7 @@ inline static void *arena_alloc(char **arena, size_t num_bytes) {
     return res;
 }
 
+CROARING_ALLOW_UNALIGNED
 void roaring_bitmap_frozen_serialize(const roaring_bitmap_t *rb, char *buf) {
     /*
      * Note: we do not require user to supply a specifically aligned buffer.
@@ -3820,6 +3821,7 @@ roaring_bitmap_t *roaring_bitmap_portable_deserialize_frozen(const char *buf) {
 #endif
 }
 
+CROARING_ALLOW_UNALIGNED
 void roaring_bitmap_word_range_to_bitset(const roaring_bitmap_t *r,
                                          uint32_t first_word, uint32_t n_words,
                                          uint64_t *words) {
@@ -3888,6 +3890,7 @@ void roaring_bitmap_word_range_to_bitset(const roaring_bitmap_t *r,
     }
 }
 
+CROARING_ALLOW_UNALIGNED
 bool roaring_bitmap_to_bitset(const roaring_bitmap_t *r, bitset_t *bitset) {
     uint32_t max_value = roaring_bitmap_maximum(r);
     size_t new_array_size = (size_t)(max_value / 64 + 1);

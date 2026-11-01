@@ -6121,6 +6121,84 @@ static bool count_values(uint32_t value, void *param) {
     return true;
 }
 
+// Every operation of the view "v" of "r" with "other", in both orders, must
+// match the same operation on "r".
+static void check_frozen_view_with(const roaring_bitmap_t *v,
+                                   const roaring_bitmap_t *r,
+                                   const roaring_bitmap_t *other) {
+    roaring_bitmap_t *(*const ops[])(const roaring_bitmap_t *,
+                                     const roaring_bitmap_t *) = {
+        roaring_bitmap_and, roaring_bitmap_or, roaring_bitmap_xor,
+        roaring_bitmap_andnot};
+    void (*const inplace_ops[])(roaring_bitmap_t *,
+                                const roaring_bitmap_t *) = {
+        roaring_bitmap_and_inplace, roaring_bitmap_or_inplace,
+        roaring_bitmap_xor_inplace, roaring_bitmap_andnot_inplace};
+    uint64_t (*const cardinalities[])(const roaring_bitmap_t *,
+                                      const roaring_bitmap_t *) = {
+        roaring_bitmap_and_cardinality, roaring_bitmap_or_cardinality,
+        roaring_bitmap_xor_cardinality, roaring_bitmap_andnot_cardinality};
+    for (size_t i = 0; i < 4; i++) {
+        roaring_bitmap_t *pairs[][2] = {
+            {ops[i](v, other), ops[i](r, other)},
+            {ops[i](other, v), ops[i](other, r)},
+            {roaring_bitmap_copy(other), roaring_bitmap_copy(other)},
+        };
+        inplace_ops[i](pairs[2][0], v);
+        inplace_ops[i](pairs[2][1], r);
+        for (size_t j = 0; j < 3; j++) {
+            assert_true(roaring_bitmap_equals(pairs[j][0], pairs[j][1]));
+            roaring_bitmap_free(pairs[j][0]);
+            roaring_bitmap_free(pairs[j][1]);
+        }
+        assert_int_equal(cardinalities[i](v, other),
+                         cardinalities[i](r, other));
+        assert_int_equal(cardinalities[i](other, v),
+                         cardinalities[i](other, r));
+    }
+
+    roaring_bitmap_t *lazy[][2] = {
+        {roaring_bitmap_lazy_or(v, other, true), roaring_bitmap_or(r, other)},
+        {roaring_bitmap_lazy_or(other, v, false), roaring_bitmap_or(other, r)},
+        {roaring_bitmap_lazy_xor(v, other), roaring_bitmap_xor(r, other)},
+        {roaring_bitmap_lazy_xor(other, v), roaring_bitmap_xor(other, r)},
+        {roaring_bitmap_copy(other), roaring_bitmap_or(other, r)},
+        {roaring_bitmap_copy(other), roaring_bitmap_xor(other, r)},
+    };
+    roaring_bitmap_lazy_or_inplace(lazy[4][0], v, true);
+    roaring_bitmap_lazy_xor_inplace(lazy[5][0], v);
+    for (size_t i = 0; i < sizeof(lazy) / sizeof(lazy[0]); i++) {
+        roaring_bitmap_repair_after_lazy(lazy[i][0]);
+        assert_true(roaring_bitmap_equals(lazy[i][0], lazy[i][1]));
+        roaring_bitmap_free(lazy[i][0]);
+        roaring_bitmap_free(lazy[i][1]);
+    }
+    const roaring_bitmap_t *with_view[] = {v, other};
+    const roaring_bitmap_t *with_r[] = {r, other};
+    roaring_bitmap_t *many[][2] = {
+        {roaring_bitmap_or_many(2, with_view),
+         roaring_bitmap_or_many(2, with_r)},
+        {roaring_bitmap_xor_many(2, with_view),
+         roaring_bitmap_xor_many(2, with_r)},
+    };
+    for (size_t i = 0; i < 2; i++) {
+        assert_true(roaring_bitmap_equals(many[i][0], many[i][1]));
+        roaring_bitmap_free(many[i][0]);
+        roaring_bitmap_free(many[i][1]);
+    }
+
+    assert_int_equal(roaring_bitmap_intersect(v, other),
+                     roaring_bitmap_intersect(r, other));
+    assert_int_equal(roaring_bitmap_is_subset(v, other),
+                     roaring_bitmap_is_subset(r, other));
+    assert_int_equal(roaring_bitmap_is_subset(other, v),
+                     roaring_bitmap_is_subset(other, r));
+    assert_int_equal(roaring_bitmap_equals(other, v),
+                     roaring_bitmap_equals(other, r));
+    assert_true(roaring_bitmap_jaccard_index(v, other) ==
+                roaring_bitmap_jaccard_index(r, other));
+}
+
 // Run the read-only API over a portable frozen view of "r" whose buffer starts
 // "offset" bytes past an aligned address. The container payloads then sit at
 // any alignment, which the view must tolerate.
@@ -6227,6 +6305,72 @@ static void check_frozen_view_queries(const roaring_bitmap_t *r,
     assert_memory_equal(again, buf, size);
     free(again);
 
+    roaring_bitmap_t *derived[][2] = {
+        {roaring_bitmap_add_offset(v, 7), roaring_bitmap_add_offset(r, 7)},
+        {roaring_bitmap_add_offset(v, -70000),
+         roaring_bitmap_add_offset(r, -70000)},
+    };
+    for (size_t i = 0; i < 2; i++) {
+        assert_true(roaring_bitmap_equals(derived[i][0], derived[i][1]));
+        roaring_bitmap_free(derived[i][0]);
+        roaring_bitmap_free(derived[i][1]);
+    }
+    bitset_t *bits[] = {bitset_create(), bitset_create()};
+    assert_true(roaring_bitmap_to_bitset(v, bits[0]));
+    assert_true(roaring_bitmap_to_bitset(r, bits[1]));
+    assert_true(bitset_contains_all(bits[0], bits[1]));
+    assert_true(bitset_contains_all(bits[1], bits[0]));
+    bitset_free(bits[0]);
+    bitset_free(bits[1]);
+    const uint32_t n_words = 13 * 1024;
+    uint64_t *words[] = {(uint64_t *)malloc(n_words * sizeof(uint64_t)),
+                         (uint64_t *)malloc(n_words * sizeof(uint64_t))};
+    roaring_bitmap_word_range_to_bitset(v, 0, n_words, words[0]);
+    roaring_bitmap_word_range_to_bitset(r, 0, n_words, words[1]);
+    assert_memory_equal(words[0], words[1], n_words * sizeof(uint64_t));
+    free(words[0]);
+    free(words[1]);
+    size_t frozen_size = roaring_bitmap_frozen_size_in_bytes(v);
+    char *frozen = (char *)roaring_aligned_malloc(32, frozen_size);
+    roaring_bitmap_frozen_serialize(v, frozen);
+    const roaring_bitmap_t *refrozen =
+        roaring_bitmap_frozen_view(frozen, frozen_size);
+    assert_non_null(refrozen);
+    assert_true(roaring_bitmap_equals(refrozen, r));
+    roaring_bitmap_free(refrozen);
+    roaring_aligned_free(frozen);
+
+    // Beside each container of "r", a container of each other type, an array
+    // much smaller than its array, and one that leaves a short tail of it.
+    roaring_bitmap_t *prefix = roaring_bitmap_create();
+    for (uint32_t i = 1; i < 3 * 202; i += 3) roaring_bitmap_add(prefix, i);
+    roaring_bitmap_t *runs = roaring_bitmap_create();
+    roaring_bitmap_add_range(runs, 0, 2000);
+    roaring_bitmap_add_range(runs, 65536, 65536 + 3000);
+    for (uint32_t i = 131072; i < 131072 + 20000; i += 2) {
+        roaring_bitmap_add(runs, i);
+    }
+    roaring_bitmap_run_optimize(runs);
+    roaring_bitmap_t *arrays = roaring_bitmap_create();
+    const uint32_t few[] = {4, 1000, 2998, (12 << 16) + 5, (12 << 16) + 777};
+    roaring_bitmap_add_many(arrays, sizeof(few) / sizeof(few[0]), few);
+    for (uint32_t i = 65536; i < 65536 + 1000; i += 10) {
+        roaring_bitmap_add(arrays, i);
+    }
+    for (uint32_t i = 139950; i < 150050; i += 101) {
+        roaring_bitmap_add(arrays, i);
+    }
+    roaring_bitmap_t *bitsets = roaring_bitmap_create();
+    for (uint32_t i = 0; i < 20000; i += 2) {
+        roaring_bitmap_add(bitsets, i);
+        roaring_bitmap_add(bitsets, (12 << 16) + i);
+    }
+    roaring_bitmap_t *others[] = {prefix, runs, arrays, bitsets};
+    for (size_t i = 0; i < sizeof(others) / sizeof(others[0]); i++) {
+        check_frozen_view_with(v, r, others[i]);
+        roaring_bitmap_free(others[i]);
+    }
+
     roaring_bitmap_free(v);
     free(storage);
 }
@@ -6248,10 +6392,12 @@ DEFINE_TEST(test_portable_deserialize_frozen_unaligned) {
     for (size_t offset = 0; offset < 8; offset++) {
         check_frozen_view_queries(r, offset);
     }
-    // Enough containers for offset headers.
+    // Enough containers for offset headers, and a full run container.
     for (uint32_t k = 3; k < 12; k++) {
         roaring_bitmap_add(r, (k << 16) + 7 * k);
     }
+    roaring_bitmap_add_range(r, 12 << 16, 13 << 16);
+    roaring_bitmap_run_optimize(r);
     for (size_t offset = 0; offset < 8; offset++) {
         check_frozen_view_queries(r, offset);
     }

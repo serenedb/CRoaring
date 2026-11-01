@@ -102,6 +102,7 @@ array_container_t *array_container_clone(const array_container_t *src) {
     return newcontainer;
 }
 
+CROARING_ALLOW_UNALIGNED
 void array_container_offset(const array_container_t *c, container_t **loc,
                             container_t **hic, uint16_t offset) {
     array_container_t *lo = NULL, *hi = NULL;
@@ -561,6 +562,7 @@ int32_t array_container_number_of_runs(const array_container_t *ac) {
  * array_container_size_in_bytes(container).
  *
  */
+CROARING_ALLOW_UNALIGNED
 int32_t array_container_write(const array_container_t *container, char *buf) {
 #if CROARING_IS_BIG_ENDIAN
     for (int32_t i = 0; i < container->cardinality; ++i) {

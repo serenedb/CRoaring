@@ -130,6 +130,7 @@ run_container_t *run_container_clone(const run_container_t *src) {
     return run;
 }
 
+CROARING_ALLOW_UNALIGNED
 void run_container_offset(const run_container_t *c, container_t **loc,
                           container_t **hic, uint16_t offset) {
     run_container_t *lo = NULL, *hi = NULL;
@@ -217,6 +218,7 @@ void run_container_grow(run_container_t *run, int32_t min, bool copy) {
 }
 
 /* copy one container into another */
+CROARING_ALLOW_UNALIGNED
 void run_container_copy(const run_container_t *src, run_container_t *dst) {
     const int32_t n_runs = src->n_runs;
     if (src->n_runs > dst->capacity) {
@@ -725,6 +727,7 @@ bool run_container_validate(const run_container_t *run, const char **reason) {
     return true;
 }
 
+CROARING_ALLOW_UNALIGNED
 int32_t run_container_write(const run_container_t *container, char *buf) {
     uint16_t cast_16 = container->n_runs;
     uint16_t n_runs_le = croaring_htole16(cast_16);
