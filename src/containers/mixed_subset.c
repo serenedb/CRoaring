@@ -7,6 +7,7 @@ namespace roaring {
 namespace internal {
 #endif
 
+CROARING_ALLOW_UNALIGNED
 bool array_container_is_subset_bitset(const array_container_t* container1,
                                       const bitset_container_t* container2) {
     if (container2->cardinality != BITSET_UNKNOWN_CARDINALITY) {
@@ -45,6 +46,7 @@ bool run_container_is_subset_array(const run_container_t* container1,
     return true;
 }
 
+CROARING_ALLOW_UNALIGNED
 bool array_container_is_subset_run(const array_container_t* container1,
                                    const run_container_t* container2) {
     if (container1->cardinality > run_container_cardinality(container2))

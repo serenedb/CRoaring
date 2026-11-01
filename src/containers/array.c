@@ -100,6 +100,7 @@ array_container_t *array_container_clone(const array_container_t *src) {
     return newcontainer;
 }
 
+CROARING_ALLOW_UNALIGNED
 void array_container_offset(const array_container_t *c, container_t **loc,
                             container_t **hic, uint16_t offset) {
     array_container_t *lo = NULL, *hi = NULL;

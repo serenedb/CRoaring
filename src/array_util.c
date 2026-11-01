@@ -856,6 +856,7 @@ static void binarySearch2(const uint16_t *array, int32_t n, uint16_t target1,
  * and binarySearch2. This approach can be slightly superior to a conventional
  * galloping search in some instances.
  */
+CROARING_ALLOW_UNALIGNED
 int32_t intersect_skewed_uint16(const uint16_t *small, size_t size_s,
                                 const uint16_t *large, size_t size_l,
                                 uint16_t *buffer) {
@@ -912,6 +913,7 @@ int32_t intersect_skewed_uint16(const uint16_t *small, size_t size_s,
 }
 
 // TODO: this could be accelerated, possibly, by using binarySearch4 as above.
+CROARING_ALLOW_UNALIGNED
 int32_t intersect_skewed_uint16_cardinality(const uint16_t *small,
                                             size_t size_s,
                                             const uint16_t *large,
@@ -947,6 +949,7 @@ int32_t intersect_skewed_uint16_cardinality(const uint16_t *small,
     return (int32_t)pos;
 }
 
+CROARING_ALLOW_UNALIGNED
 bool intersect_skewed_uint16_nonempty(const uint16_t *small, size_t size_s,
                                       const uint16_t *large, size_t size_l) {
     size_t idx_l = 0, idx_s = 0;

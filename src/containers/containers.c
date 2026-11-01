@@ -384,6 +384,7 @@ roaring_container_iterator_t container_init_iterator_last(const container_t *c,
     }
 }
 
+CROARING_ALLOW_UNALIGNED
 bool container_iterator_lower_bound(const container_t *c, uint8_t typecode,
                                     roaring_container_iterator_t *it,
                                     uint16_t *value_out, uint16_t val) {

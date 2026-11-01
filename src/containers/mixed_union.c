@@ -38,6 +38,7 @@ void array_bitset_container_lazy_union(const array_container_t *src_1,
     dst->cardinality = BITSET_UNKNOWN_CARDINALITY;
 }
 
+CROARING_ALLOW_UNALIGNED
 void run_bitset_container_union(const run_container_t *src_1,
                                 const bitset_container_t *src_2,
                                 bitset_container_t *dst) {
@@ -50,6 +51,7 @@ void run_bitset_container_union(const run_container_t *src_1,
     dst->cardinality = bitset_container_compute_cardinality(dst);
 }
 
+CROARING_ALLOW_UNALIGNED
 void run_bitset_container_lazy_union(const run_container_t *src_1,
                                      const bitset_container_t *src_2,
                                      bitset_container_t *dst) {
@@ -63,6 +65,7 @@ void run_bitset_container_lazy_union(const run_container_t *src_1,
 }
 
 // why do we leave the result as a run container??
+CROARING_ALLOW_UNALIGNED
 void array_run_container_union(const array_container_t *src_1,
                                const run_container_t *src_2,
                                run_container_t *dst) {
@@ -107,6 +110,7 @@ void array_run_container_union(const array_container_t *src_1,
     }
 }
 
+CROARING_ALLOW_UNALIGNED
 void array_run_container_inplace_union(const array_container_t *src_1,
                                        run_container_t *src_2) {
     if (run_container_is_full(src_2)) {

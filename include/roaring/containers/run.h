@@ -638,6 +638,7 @@ int run_container_get_index(const run_container_t *arr, uint16_t x);
 
 /* Returns the index of the first run containing a value at least as large as x,
  * or -1 */
+CROARING_ALLOW_UNALIGNED
 inline int run_container_index_equalorlarger(const run_container_t *arr,
                                              uint16_t x) {
     int32_t index = interleavedBinarySearch(arr->runs, arr->n_runs, x);

@@ -58,6 +58,7 @@ void array_bitset_container_lazy_xor(const array_container_t *src_1,
  * result true) or an array container.
  */
 
+CROARING_ALLOW_UNALIGNED
 bool run_bitset_container_xor(const run_container_t *src_1,
                               const bitset_container_t *src_2,
                               container_t **dst) {
@@ -85,6 +86,7 @@ bool run_bitset_container_xor(const run_container_t *src_1,
  *  cardinality would dictate an array container.
  */
 
+CROARING_ALLOW_UNALIGNED
 void run_bitset_container_lazy_xor(const run_container_t *src_1,
                                    const bitset_container_t *src_2,
                                    bitset_container_t *dst) {
@@ -142,6 +144,7 @@ int array_run_container_xor(const array_container_t *src_1,
  * smaller.
  */
 
+CROARING_ALLOW_UNALIGNED
 void array_run_container_lazy_xor(const array_container_t *src_1,
                                   const run_container_t *src_2,
                                   run_container_t *dst) {

@@ -21,6 +21,7 @@ namespace internal {
 
 /* Compute the andnot of src_1 and src_2 and write the result to
  * dst, a valid array container that could be the same as dst.*/
+CROARING_ALLOW_UNALIGNED
 void array_bitset_container_andnot(const array_container_t *src_1,
                                    const bitset_container_t *src_2,
                                    array_container_t *dst) {
@@ -104,6 +105,7 @@ bool bitset_array_container_iandnot(bitset_container_t *src_1,
  * result true) or an array container.
  */
 
+CROARING_ALLOW_UNALIGNED
 bool run_bitset_container_andnot(const run_container_t *src_1,
                                  const bitset_container_t *src_2,
                                  container_t **dst) {
@@ -175,6 +177,7 @@ bool run_bitset_container_iandnot(run_container_t *src_1,
  * result true) or an array container.
  */
 
+CROARING_ALLOW_UNALIGNED
 bool bitset_run_container_andnot(const bitset_container_t *src_1,
                                  const run_container_t *src_2,
                                  container_t **dst) {
@@ -205,6 +208,7 @@ bool bitset_run_container_andnot(const bitset_container_t *src_1,
  * cases, the caller is responsible for deallocating dst.
  * Returns true iff dst is a bitset  */
 
+CROARING_ALLOW_UNALIGNED
 bool bitset_run_container_iandnot(bitset_container_t *src_1,
                                   const run_container_t *src_2,
                                   container_t **dst) {
@@ -233,6 +237,7 @@ bool bitset_run_container_iandnot(bitset_container_t *src_1,
  * to avoid advanceUntil?
  */
 
+CROARING_ALLOW_UNALIGNED
 static int run_array_array_subtract(const run_container_t *rc,
                                     const array_container_t *a_in,
                                     array_container_t *a_out) {
@@ -381,6 +386,7 @@ int run_array_container_iandnot(run_container_t *src_1,
 
 /* dst must be a valid array container, allowed to be src_1 */
 
+CROARING_ALLOW_UNALIGNED
 void array_run_container_andnot(const array_container_t *src_1,
                                 const run_container_t *src_2,
                                 array_container_t *dst) {
