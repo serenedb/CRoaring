@@ -59,8 +59,7 @@ bool bitset_array_container_andnot(const bitset_container_t *src_1,
                                    const array_container_t *src_2,
                                    container_t **dst) {
     // Java did this directly, but we have option of asm or avx
-    bitset_container_t *result = bitset_container_create();
-    bitset_container_copy(src_1, result);
+    bitset_container_t *result = bitset_container_clone(src_1);
     result->cardinality =
         (int32_t)bitset_clear_list(result->words, (uint64_t)result->cardinality,
                                    src_2->array, (uint64_t)src_2->cardinality);
@@ -182,9 +181,7 @@ bool bitset_run_container_andnot(const bitset_container_t *src_1,
                                  const run_container_t *src_2,
                                  container_t **dst) {
     // follows Java implementation
-    bitset_container_t *result = bitset_container_create();
-
-    bitset_container_copy(src_1, result);
+    bitset_container_t *result = bitset_container_clone(src_1);
     for (int32_t rlepos = 0; rlepos < src_2->n_runs; ++rlepos) {
         rle16_t rle = src_2->runs[rlepos];
         bitset_reset_range(result->words, rle.value,
@@ -491,7 +488,7 @@ void array_array_container_iandnot(array_container_t *src_1,
 bool bitset_bitset_container_andnot(const bitset_container_t *src_1,
                                     const bitset_container_t *src_2,
                                     container_t **dst) {
-    bitset_container_t *ans = bitset_container_create();
+    bitset_container_t *ans = bitset_container_create_uninitialized();
     int card = bitset_container_andnot(src_1, src_2, ans);
     if (card <= DEFAULT_MAX_SIZE) {
         *dst = array_container_from_bitset(ans);

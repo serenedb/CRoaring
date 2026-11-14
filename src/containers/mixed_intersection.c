@@ -346,7 +346,7 @@ bool bitset_bitset_container_intersection(const bitset_container_t *src_1,
                                           container_t **dst) {
     const int newCardinality = bitset_container_and_justcard(src_1, src_2);
     if (newCardinality > DEFAULT_MAX_SIZE) {
-        *dst = bitset_container_create();
+        *dst = bitset_container_create_uninitialized();
         if (*dst != NULL) {
             bitset_container_and_nocard(src_1, src_2, CAST_bitset(*dst));
             CAST_bitset(*dst)->cardinality = newCardinality;
