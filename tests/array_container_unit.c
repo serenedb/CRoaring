@@ -366,6 +366,33 @@ DEFINE_TEST(mini_fuzz_array_container_intersection_inplace) {
     free(buffer3);
 }
 
+DEFINE_TEST(array_container_intersect_test) {
+    splitmix64_seed(4321);
+    for (size_t z = 0; z < 5000; z++) {
+        array_container_t* left = array_container_create();
+        array_container_t* right = array_container_create();
+        const uint32_t length = (uint32_t)(splitmix64() % 2048);
+        const uint32_t step = 2 * (1 + (uint32_t)(splitmix64() % 15));
+        uint32_t added = 0;
+        for (uint32_t i = 0; i < length && i * step + 1 < 65536; i++) {
+            array_container_add(left, (uint16_t)(i * step));
+            array_container_add(right, (uint16_t)(i * step + 1));
+            added++;
+        }
+        assert_false(array_container_intersect(left, right));
+        if (added != 0 && (splitmix64() & 1)) {
+            const uint32_t shared = (uint32_t)(splitmix64() % added) * step;
+            array_container_add(right, (uint16_t)shared);
+            assert_true(array_container_intersect(left, right));
+        }
+        assert_int_equal(
+            array_container_intersect(left, right),
+            array_container_intersection_cardinality(left, right) > 0);
+        array_container_free(left);
+        array_container_free(right);
+    }
+}
+
 DEFINE_TEST(mini_fuzz_recycle_array_container_intersection_inplace) {
     splitmix64_seed(12345);
     uint16_t* buffer1 = (uint16_t*)malloc(DEFAULT_MAX_SIZE * sizeof(uint16_t));
@@ -478,6 +505,7 @@ DEFINE_TEST(shrink_to_fit_failed_realloc_test) {
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(mini_fuzz_array_container_intersection_inplace),
+        cmocka_unit_test(array_container_intersect_test),
         cmocka_unit_test(
             mini_fuzz_recycle_array_container_intersection_inplace),
         cmocka_unit_test(printf_test),

@@ -650,6 +650,60 @@ int32_t intersect_vector16_cardinality(const uint16_t *A, size_t s_a,
 CROARING_UNTARGET_AVX2
 
 CROARING_TARGET_AVX2
+CROARING_ALLOW_UNALIGNED
+bool intersect_vector16_nonempty(const uint16_t* A, size_t s_a,
+                                 const uint16_t* B, size_t s_b) {
+    size_t i_a = 0, i_b = 0;
+    const int vectorlength = sizeof(__m128i) / sizeof(uint16_t);
+    const size_t st_a = (s_a / vectorlength) * vectorlength;
+    const size_t st_b = (s_b / vectorlength) * vectorlength;
+    __m128i v_a, v_b;
+    if ((i_a < st_a) && (i_b < st_b)) {
+        v_a = _mm_lddqu_si128((__m128i*)&A[i_a]);
+        v_b = _mm_lddqu_si128((__m128i*)&B[i_b]);
+        while ((A[i_a] == 0) || (B[i_b] == 0)) {
+            const __m128i res_v = _mm_cmpestrm(
+                v_b, vectorlength, v_a, vectorlength,
+                _SIDD_UWORD_OPS | _SIDD_CMP_EQUAL_ANY | _SIDD_BIT_MASK);
+            if (_mm_extract_epi32(res_v, 0) != 0) return true;
+            const uint16_t a_max = A[i_a + vectorlength - 1];
+            const uint16_t b_max = B[i_b + vectorlength - 1];
+            if (a_max <= b_max) {
+                i_a += vectorlength;
+                if (i_a == st_a) break;
+                v_a = _mm_lddqu_si128((__m128i*)&A[i_a]);
+            }
+            if (b_max <= a_max) {
+                i_b += vectorlength;
+                if (i_b == st_b) break;
+                v_b = _mm_lddqu_si128((__m128i*)&B[i_b]);
+            }
+        }
+        if ((i_a < st_a) && (i_b < st_b))
+            while (true) {
+                const __m128i res_v = _mm_cmpistrm(
+                    v_b, v_a,
+                    _SIDD_UWORD_OPS | _SIDD_CMP_EQUAL_ANY | _SIDD_BIT_MASK);
+                if (_mm_extract_epi32(res_v, 0) != 0) return true;
+                const uint16_t a_max = A[i_a + vectorlength - 1];
+                const uint16_t b_max = B[i_b + vectorlength - 1];
+                if (a_max <= b_max) {
+                    i_a += vectorlength;
+                    if (i_a == st_a) break;
+                    v_a = _mm_lddqu_si128((__m128i*)&A[i_a]);
+                }
+                if (b_max <= a_max) {
+                    i_b += vectorlength;
+                    if (i_b == st_b) break;
+                    v_b = _mm_lddqu_si128((__m128i*)&B[i_b]);
+                }
+            }
+    }
+    return intersect_uint16_nonempty(A + i_a, s_a - i_a, B + i_b, s_b - i_b);
+}
+CROARING_UNTARGET_AVX2
+
+CROARING_TARGET_AVX2
 /////////
 // Warning:
 // This function may not be safe if A == C or B == C.
